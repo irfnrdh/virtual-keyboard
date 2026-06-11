@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Papan Ketik Cadangan — Virtual Keyboard & Tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #161b24;
+  --surface2: #1c2330;
+  --border: #252d3d;
+  --border-bright: #2e3a4e;
+  --key: #1e2635;
+  --key-hover: #253045;
+  --text: #e2e8f0;
+  --text-muted: #64748b;
+  --text-dim: #475569;
+  --accent: #3b82f6;
+  --accent-glow: rgba(59,130,246,.2);
+  --broken: #ef4444;
+  --broken-glow: rgba(239,68,68,.2);
+  --ok: #22c55e;
+  --ok-glow: rgba(34,197,94,.2);
+  --warn: #f59e0b;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --radius-pill: 999px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+/* ── FOCUS MODE ── */
+body.focus-mode #site-header,
+body.focus-mode #sys-bar,
+body.focus-mode #full-keyboard,
+body.focus-mode #sym-nav-row,
+body.focus-mode #status-row,
+body.focus-mode #tester-row,
+body.focus-mode footer,
+body.focus-mode .screen-toolbar { display: none !important; }
+
+body.focus-mode { padding: 0; }
+body.focus-mode #main-wrap { padding: 0; max-width: 100%; height: 100vh; display: flex; flex-direction: column; }
+body.focus-mode #screen-panel { flex: 1; border-radius: 0; border: none; margin: 0; display: flex; flex-direction: column; }
+body.focus-mode #output { flex: 1; min-height: 0; resize: none; border-radius: 0; font-size: 1.15rem; }
+body.focus-mode #focus-toolbar { display: flex !important; }
+body.focus-mode #broken-only-row { display: block !important; }
+body.focus-mode #broken-only-row .kb-inner { min-width: 0; }
+
+/* ── LAYOUT ── */
+#main-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 16px 80px;
+}
+
+/* ── SITE HEADER ── */
+#site-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-icon {
+  width: 40px; height: 40px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex: none;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.brand-icon svg { color: #fff; }
+.brand-text { }
+.brand-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+.brand-sub {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── SYS BAR ── */
+#sys-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.sys-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--key);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.sys-badge .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+.sys-badge.warn .dot { background: var(--warn); }
+.sys-bar-spacer { flex: 1; }
+.bookmark-hint {
+  font-size: .72rem;
+  color: var(--text-dim);
+  display: flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+}
+kbd {
+  font-family: var(--mono);
+  font-size: .7rem;
+  background: var(--key);
+  border: 1px solid var(--border-bright);
+  border-bottom-width: 2px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--text-muted);
+}
+
+/* ── SCREEN ── */
+#screen-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.screen-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.screen-label {
+  font-family: var(--mono);
+  font-size: .72rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.char-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--text-muted);
+}
+.autosave-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: background .3s;
+  flex: none;
+}
+.autosave-dot.saved { background: var(--ok); }
+
+#output {
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  background: #0a0d12;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1rem;
+  line-height: 1.7;
+  padding: 14px;
+  outline: none;
+  caret-color: var(--accent);
+  transition: border-color .15s;
+}
+#output:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+.screen-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: .82rem;
+  border: 1px solid var(--border-bright);
+  background: var(--key);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .1s, border-color .1s, box-shadow .1s, transform .05s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:hover { background: var(--key-hover); border-color: var(--border-bright); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 0 var(--accent-glow); }
+.btn.primary:hover { filter: brightness(1.08); box-shadow: 0 0 0 3px var(--accent-glow); }
+.btn.danger { background: var(--broken); border-color: var(--broken); color: #fff; }
+.btn.danger:hover { filter: brightness(1.1); }
+.btn.ghost { background: transparent; border-color: var(--border); }
+.btn.ghost:hover { background: var(--surface2); }
+.btn.sm { padding: 6px 10px; font-size: .76rem; }
+.btn.pill { border-radius: var(--radius-pill); }
+.btn.icon-only { padding: 8px; }
+.btn.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+
+/* ── STATUS BAR ── */
+#status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.toggle-pill {
+  font-family: var(--mono);
+  font-size: .78rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-bright);
+  background: var(--key);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.toggle-pill.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.status-hint {
+  font-size: .75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  flex: 1 1 200px;
+}
+
+/* ── KEYBOARD SECTION LABEL ── */
+.kb-label {
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 12px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kb-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── KEYBOARD ── */
+.keyboard-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+.kb-inner {
+  min-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.row { display: flex; gap: 5px; }
+
+/* ── KEYS ── */
+.key {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: clamp(42px, 7.5vw, 54px);
+  background: var(--key);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: clamp(.68rem, 2.2vw, .92rem);
+  line-height: 1.15;
+  padding: 3px 4px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .08s, border-color .08s, transform .04s, box-shadow .08s;
+}
+.key:hover { background: var(--key-hover); border-color: var(--border-bright); }
+.key:active { transform: translateY(1px) scale(.97); }
+
+.key .shift-char {
+  font-size: .65em;
+  color: var(--text-dim);
+  min-height: .85em;
+  line-height: 1;
+}
+.key .main-char { line-height: 1; }
+
+.key.action {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: clamp(.6rem, 1.9vw, .76rem);
+  color: var(--text-muted);
+  gap: 2px;
+}
+.key.symbol { font-size: clamp(.82rem, 2.5vw, 1.1rem); }
+.key.is-on {
+  background: color-mix(in srgb, var(--accent) 18%, var(--key));
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Key tester states */
+.key.k-pressing {
+  background: color-mix(in srgb, var(--ok) 25%, var(--key)) !important;
+  border-color: var(--ok) !important;
+  color: #0f2d1a !important;
+  transform: translateY(1px) scale(.97);
+  box-shadow: 0 0 0 3px var(--ok-glow);
+}
+.key.k-ok::after {
+  content: '';
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 4px var(--ok);
+}
+.key.k-broken {
+  background: color-mix(in srgb, var(--broken) 18%, var(--key)) !important;
+  border-color: var(--broken) !important;
+  color: var(--broken) !important;
+}
+.key.k-broken::after {
+  content: '✕';
+  position: absolute;
+  top: 3px; right: 4px;
+  font-size: .52rem;
+  color: var(--broken);
+  font-family: var(--sans);
+}
+
+/* Broken-only focus view */
+#broken-only-row { display: none; }
+#broken-only-row .kb-inner { min-width: 0; }
+#broken-only-row .row { flex-wrap: wrap; }
+#broken-only-row .key { flex: 0 0 auto; width: 64px; height: 54px; }
+
+/* ── TESTER ROW ── */
+#tester-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.legend-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.ld-ok { background: var(--ok); box-shadow: 0 0 4px var(--ok); }
+.ld-pressing { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-glow); }
+.ld-broken { background: var(--broken); box-shadow: 0 0 4px var(--broken); }
+#caps-status { font-family: var(--mono); font-size: .72rem; color: var(--text-muted); }
+#caps-status.on { color: var(--warn); font-weight: 700; }
+
+/* ── BROKEN KEYS BANNER ── */
+#broken-banner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--broken) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--broken) 35%, var(--border));
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  font-size: .82rem;
+  flex-wrap: wrap;
+}
+#broken-banner.visible { display: flex; }
+#broken-banner .broken-icon { font-size: 1.1rem; flex: none; }
+#broken-banner strong { color: var(--broken); }
+#broken-keys-list { font-family: var(--mono); font-size: .75rem; color: var(--text-muted); }
+
+/* ── REPORT MODAL ── */
+#report-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#report-modal.open { display: flex; }
+#report-box {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 540px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+#report-box h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.report-stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+}
+.report-stat .num {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: var(--mono);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.report-stat .lbl { font-size: .72rem; color: var(--text-muted); }
+.report-stat.ok .num { color: var(--ok); }
+.report-stat.broken .num { color: var(--broken); }
+.report-stat.total .num { color: var(--accent); }
+
+.report-section-label {
+  font-family: var(--mono);
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.report-key-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.report-key {
+  font-family: var(--mono);
+  font-size: .78rem;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid;
+}
+.report-key.ok { background: var(--ok-glow); border-color: var(--ok); color: var(--ok); }
+.report-key.broken { background: var(--broken-glow); border-color: var(--broken); color: var(--broken); }
+.report-meta { font-size: .75rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.6; }
+.report-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── FOCUS TOOLBAR ── */
+#focus-toolbar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.focus-indicator {
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--accent);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pulse-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .4; transform: scale(.8); }
+}
+
+/* ── FOOTER ── */
+footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: .76rem;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+
+/* ── TOAST ── */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translate(-50%, 20px);
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: .85rem;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  z-index: 200;
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.ok { border-color: var(--ok); color: var(--ok); }
+#toast.bad { border-color: var(--broken); color: var(--broken); }
+
+@media (max-width: 600px) {
+  .kb-inner { min-width: 520px; }
+  .report-grid { grid-template-columns: repeat(2, 1fr); }
+  .header-actions { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="main-wrap">
+
+  <!-- SITE HEADER -->
+  <header id="site-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="14" rx="2"/>
+          <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h.01M12 14h.01M16 14h.01M6 18h12"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">Papan Ketik Cadangan</div>
+        <div class="brand-sub">Virtual keyboard & keyboard tester</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn ghost sm" id="reportBtn">📊 Buat Laporan</button>
+      <button class="btn ghost sm" id="focusModeBtn">⛶ Mode Fokus</button>
+    </div>
+  </header>
+
+  <!-- SYS BAR -->
+  <div id="sys-bar">
+    <span class="sys-badge"><span class="dot"></span><span id="os-badge">Mendeteksi OS…</span></span>
+    <span class="sys-badge"><span class="dot"></span><span id="layout-badge">Layout: mendeteksi…</span></span>
+    <span class="sys-badge" id="device-badge-el"><span class="dot"></span><span id="device-badge">Tipe perangkat: …</span></span>
+    <span class="sys-bar-spacer"></span>
+    <span class="bookmark-hint">
+      💾 Bookmark: <kbd id="bm-shortcut">Ctrl+D</kbd>
+    </span>
+  </div>
+
+  <!-- BROKEN BANNER -->
+  <div id="broken-banner">
+    <span class="broken-icon">⚠️</span>
+    <span>Tombol yang terdeteksi <strong>rusak</strong> atau belum pernah merespons: <span id="broken-keys-list">—</span></span>
+  </div>
+
+  <!-- SCREEN PANEL -->
+  <div id="screen-panel">
+    <div class="screen-head">
+      <span class="screen-label">Hasil Ketikan</span>
+      <div class="char-meta">
+        <span class="autosave-dot" id="autosave-dot" title="Auto-simpan"></span>
+        <span id="char-count">0 karakter · 0 kata</span>
+      </div>
+    </div>
+    <textarea id="output" spellcheck="false" placeholder="Mulai ketik di sini, atau klik tombol keyboard di bawah…"></textarea>
+    <div class="screen-toolbar">
+      <button class="btn primary" id="copyBtn">📋 Salin Semua</button>
+      <button class="btn ghost" id="clearBtn">🗑 Hapus</button>
+      <button class="btn ghost" id="autoCopyBtn">🔁 Auto-Salin: Off</button>
+      <div style="flex:1"></div>
+      <button class="btn ghost sm" id="reportBtn2">📊 Laporan</button>
+      <button class="btn ghost sm" id="focusModeBtn2">⛶ Fokus</button>
+    </div>
+  </div>
+
+  <!-- STATUS ROW -->
+  <div id="status-row">
+    <span class="toggle-pill" id="shiftPill">⇧ Shift</span>
+    <span class="toggle-pill" id="capsPill">⇪ Caps Lock</span>
+    <span class="status-hint">Aktifkan Shift/Caps Lock virtual di sini, atau gunakan Shift/Caps fisik di keyboardmu. Auto-Salin: setiap klik tombol langsung tersalin ke clipboard.</span>
+    <button class="btn ghost sm" id="autoCopyBtn2">🔁 Auto-Salin: Off</button>
+  </div>
+
+  <!-- KEYBOARD LABEL -->
+  <div class="kb-label">Tombol Karakter</div>
+
+  <!-- MAIN KEYBOARD -->
+  <div class="keyboard-wrap" id="full-keyboard">
+    <div class="kb-inner" id="kbMain"></div>
+  </div>
+
+  <!-- TESTER ROW -->
+  <div id="tester-row">
+    <span class="legend-item"><span class="legend-dot ld-pressing"></span> Sedang ditekan</span>
+    <span class="legend-item"><span class="legend-dot ld-ok"></span> Berfungsi</span>
+    <span class="legend-item"><span class="legend-dot ld-broken"></span> Rusak / tidak respons</span>
+    <span id="caps-status">⌨️ Caps Lock fisik: —</span>
+    <div style="flex:1"></div>
+    <button class="btn ghost sm" id="markBrokenBtn">✕ Tandai Rusak</button>
+    <button class="btn ghost sm" id="resetTestBtn">↺ Reset Tes</button>
+  </div>
+
+  <!-- SYM/NAV ROWS -->
+  <div id="sym-nav-row">
+    <div class="kb-label">Simbol Tambahan</div>
+    <div class="keyboard-wrap">
+      <div class="kb-inner" id="kbSym"></div>
+    </div>
+    <div class="kb-label">Spasi & Navigasi</div>
+    <div class="keyboard-wrap">
+      <div class="kb-inner" id="kbNav"></div>
+    </div>
+  </div>
+
+  <!-- BROKEN-ONLY FOCUS ROW -->
+  <div id="broken-only-row">
+    <div class="kb-label">Tombol yang Tidak Berfungsi</div>
+    <div class="keyboard-wrap">
+      <div class="kb-inner" id="kbBrokenOnly"></div>
+    </div>
+  </div>
+
+  <!-- FOCUS TOOLBAR -->
+  <div id="focus-toolbar">
+    <div class="focus-indicator">
+      <span class="pulse-dot"></span> MODE FOKUS
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn ghost sm" id="copyBtnFocus">📋 Salin</button>
+    <button class="btn ghost sm" id="exitFocusBtn">✕ Keluar Fokus</button>
+  </div>
+
+  <footer>
+    Teks tersimpan otomatis di browser (localStorage). Tombol <strong>Fn</strong> tidak bisa dideteksi browser mana pun — gunakan virtual Home/End/Delete di atas.<br>
+    Gunakan <strong>Mode Fokus</strong> agar tampilan bersih: hanya area ketik dan tombol rusak yang muncul.
+  </footer>
+</div>
+
+<!-- REPORT MODAL -->
+<div id="report-modal">
+  <div id="report-box">
+    <h2>📊 Laporan Keyboard</h2>
+    <div id="report-sys-info" class="report-meta"></div>
+    <div class="report-grid">
+      <div class="report-stat total"><div class="num" id="rTotal">0</div><div class="lbl">Total Tombol</div></div>
+      <div class="report-stat ok"><div class="num" id="rOk">0</div><div class="lbl">Berfungsi</div></div>
+      <div class="report-stat broken"><div class="num" id="rBroken">0</div><div class="lbl">Rusak / Tidak Respons</div></div>
+    </div>
+    <div class="report-section-label">Tombol Rusak / Tidak Pernah Diuji</div>
+    <div class="report-key-list" id="rBrokenList"></div>
+    <div class="report-section-label">Tombol Berfungsi</div>
+    <div class="report-key-list" id="rOkList"></div>
+    <div class="report-section-label">Ringkasan Teks Saat Ini</div>
+    <div class="report-meta" id="rTextMeta"></div>
+    <div class="report-actions">
+      <button class="btn primary" id="rCopyBtn">📋 Salin Laporan</button>
+      <button class="btn ghost" id="rCloseBtn">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  /* ── STATE ── */
+  let shiftOn = false, capsOn = false, autoCopyOn = false;
+  let focusMode = false;
+  const testedCodes = new Set();   // codes that fired keydown
+  const brokenCodes = new Set();   // manually marked or never responded
+  const keyBtnMap = {};            // code -> [btn, ...]
+  const keyDataMap = {};           // lowercase char -> {n, s}
+
+  /* ── ELEMENTS ── */
+  const output      = document.getElementById('output');
+  const charCount   = document.getElementById('char-count');
+  const autosaveDot = document.getElementById('autosave-dot');
+  const toast       = document.getElementById('toast');
+  const shiftPill   = document.getElementById('shiftPill');
+  const capsPill    = document.getElementById('capsPill');
+  const capsStatus  = document.getElementById('caps-status');
+
+  /* ── STORAGE ── */
+  const STORE_TEXT = 'pkc_text';
+  const STORE_BROKEN = 'pkc_broken';
+  const STORE_TESTED = 'pkc_tested';
+
+  function loadStorage() {
+    try {
+      const t = localStorage.getItem(STORE_TEXT);
+      if (t !== null) { output.value = t; updateCount(); }
+      const b = JSON.parse(localStorage.getItem(STORE_BROKEN) || '[]');
+      b.forEach(c => brokenCodes.add(c));
+      const ok = JSON.parse(localStorage.getItem(STORE_TESTED) || '[]');
+      ok.forEach(c => testedCodes.add(c));
+    } catch(e) {}
+  }
+
+  function saveStorage() {
+    try {
+      localStorage.setItem(STORE_TEXT, output.value);
+      localStorage.setItem(STORE_BROKEN, JSON.stringify([...brokenCodes]));
+      localStorage.setItem(STORE_TESTED, JSON.stringify([...testedCodes]));
+    } catch(e) {}
+  }
+
+  let saveTimer;
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    autosaveDot.classList.remove('saved');
+    saveTimer = setTimeout(() => {
+      saveStorage();
+      autosaveDot.classList.add('saved');
+      setTimeout(() => autosaveDot.classList.remove('saved'), 2000);
+    }, 600);
+  }
+
+  /* ── SYSTEM DETECTION ── */
+  function detectSystem() {
+    const ua = navigator.userAgent;
+    let os = 'Unknown OS';
+    if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+    else if (/Windows NT 6\.3/.test(ua)) os = 'Windows 8.1';
+    else if (/Windows/.test(ua)) os = 'Windows';
+    else if (/Mac OS X/.test(ua)) os = 'macOS';
+    else if (/Android/.test(ua)) os = 'Android';
+    else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+    else if (/Linux/.test(ua)) os = 'Linux';
+
+    const isMobile = /Mobi|Android|iPhone|iPad/.test(ua);
+    const isTablet = /iPad/.test(ua) || (/Android/.test(ua) && !/Mobile/.test(ua));
+    const deviceType = isTablet ? 'Tablet' : isMobile ? 'Ponsel' : 'Desktop/Laptop';
+
+    const isMac = /Mac/.test(ua);
+    const bmKey = isMac ? '⌘+D' : 'Ctrl+D';
+    document.getElementById('bm-shortcut').textContent = bmKey;
+
+    document.getElementById('os-badge').textContent = 'OS: ' + os;
+    document.getElementById('device-badge').textContent = 'Perangkat: ' + deviceType;
+
+    // Layout detection: attempt via Keyboard API or heuristic
+    if (navigator.keyboard && navigator.keyboard.getLayoutMap) {
+      navigator.keyboard.getLayoutMap().then(map => {
+        // Check a few keys to guess layout
+        const q = map.get('KeyQ'), a = map.get('KeyA');
+        let layout = 'QWERTY';
+        if (q === 'a' && a === 'q') layout = 'AZERTY';
+        else if (q === 'q' && a === 'a') {
+          // Check W vs Z
+          const w = map.get('KeyW');
+          if (w === 'z') layout = 'QWERTZ';
+        }
+        document.getElementById('layout-badge').textContent = 'Layout: ' + layout + ' (terdeteksi)';
+      }).catch(() => {
+        document.getElementById('layout-badge').textContent = 'Layout: QWERTY (asumsi)';
+      });
+    } else {
+      document.getElementById('layout-badge').textContent = 'Layout: QWERTY (asumsi)';
+    }
+  }
+
+  /* ── KEYBOARD LAYOUT DEF ── */
+  const ROW1 = [
+    {n:'`',s:'~',c:'Backquote'},{n:'1',s:'!',c:'Digit1'},{n:'2',s:'@',c:'Digit2'},{n:'3',s:'#',c:'Digit3'},
+    {n:'4',s:'$',c:'Digit4'},{n:'5',s:'%',c:'Digit5'},{n:'6',s:'^',c:'Digit6'},{n:'7',s:'&',c:'Digit7'},
+    {n:'8',s:'*',c:'Digit8'},{n:'9',s:'(',c:'Digit9'},{n:'0',s:')',c:'Digit0'},{n:'-',s:'_',c:'Minus'},
+    {n:'=',s:'+',c:'Equal'},{action:'backspace',label:'⌫ Back',flex:1.7,c:'Backspace'}
+  ];
+  const ROW2 = [
+    {action:'tab',label:'⇥ Tab',insert:'\t',flex:1.4,c:'Tab'},
+    {n:'q',s:'Q',c:'KeyQ'},{n:'w',s:'W',c:'KeyW'},{n:'e',s:'E',c:'KeyE'},{n:'r',s:'R',c:'KeyR'},
+    {n:'t',s:'T',c:'KeyT'},{n:'y',s:'Y',c:'KeyY'},{n:'u',s:'U',c:'KeyU'},{n:'i',s:'I',c:'KeyI'},
+    {n:'o',s:'O',c:'KeyO'},{n:'p',s:'P',c:'KeyP'},{n:'[',s:'{',c:'BracketLeft'},
+    {n:']',s:'}',c:'BracketRight'},{n:'\\',s:'|',c:'Backslash'}
+  ];
+  const ROW3 = [
+    {action:'capslock',label:'⇪ Caps',flex:1.7,c:'CapsLock'},
+    {n:'a',s:'A',c:'KeyA'},{n:'s',s:'S',c:'KeyS'},{n:'d',s:'D',c:'KeyD'},{n:'f',s:'F',c:'KeyF'},
+    {n:'g',s:'G',c:'KeyG'},{n:'h',s:'H',c:'KeyH'},{n:'j',s:'J',c:'KeyJ'},{n:'k',s:'K',c:'KeyK'},
+    {n:'l',s:'L',c:'KeyL'},{n:';',s:':',c:'Semicolon'},{n:"'",s:'"',c:'Quote'},
+    {action:'enter',label:'⏎ Enter',insert:'\n',flex:1.9,c:'Enter'}
+  ];
+  const ROW4 = [
+    {action:'shift',label:'⇧ Shift',flex:2.1,c:'ShiftLeft'},
+    {n:'z',s:'Z',c:'KeyZ'},{n:'x',s:'X',c:'KeyX'},{n:'c',s:'C',c:'KeyC'},{n:'v',s:'V',c:'KeyV'},
+    {n:'b',s:'B',c:'KeyB'},{n:'n',s:'N',c:'KeyN'},{n:'m',s:'M',c:'KeyM'},{n:',',s:'<',c:'Comma'},
+    {n:'.',s:'>',c:'Period'},{n:'/',s:'?',c:'Slash'},
+    {action:'shift',label:'⇧ Shift',flex:2.1,c:'ShiftRight'}
+  ];
+  const SYMS = ['€','£','¥','©','®','™','°','×','÷','—','–','…','"','"',''',''','•','§','¶','±','≈','≠','→','←','✓','★','♦'];
+  const ROW6 = [
+    {action:'left',label:'←',flex:1,c:'ArrowLeft'},
+    {action:'up',label:'↑',flex:1,c:'ArrowUp'},
+    {action:'home',label:'Home',flex:1.3,c:'Home'},
+    {action:'space',label:'SPASI',insert:' ',flex:5.5,c:'Space'},
+    {action:'end',label:'End',flex:1.3,c:'End'},
+    {action:'delete',label:'Del',flex:1.2,c:'Delete'},
+    {action:'down',label:'↓',flex:1,c:'ArrowDown'},
+    {action:'right',label:'→',flex:1,c:'ArrowRight'}
+  ];
+
+  /* ── BUILD KEY ── */
+  function isLetter(c) { return /^[a-z]$/i.test(c); }
+
+  function currentChar(k) {
+    const letter = isLetter(k.n);
+    const useShift = letter ? (capsOn !== shiftOn) : shiftOn;
+    return useShift ? k.s : k.n;
+  }
+
+  function buildKey(k) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'key';
+    if (k.flex) btn.style.flexGrow = k.flex;
+
+    if (k.c) {
+      btn.dataset.code = k.c;
+      if (!keyBtnMap[k.c]) keyBtnMap[k.c] = [];
+      keyBtnMap[k.c].push(btn);
+    }
+
+    if (k.symbol !== undefined) {
+      btn.classList.add('symbol');
+      btn.textContent = k.symbol;
+      btn.addEventListener('click', () => { insertText(k.symbol); maybeCopy(k.symbol); });
+    } else if (k.action) {
+      btn.classList.add('action');
+      btn.textContent = k.label;
+      btn.addEventListener('click', () => handleAction(k));
+    } else {
+      const shiftSpan = document.createElement('span');
+      shiftSpan.className = 'shift-char';
+      const mainSpan = document.createElement('span');
+      mainSpan.className = 'main-char';
+      btn.appendChild(shiftSpan);
+      btn.appendChild(mainSpan);
+      btn.dataset.n = k.n;
+      btn.dataset.s = k.s;
+      keyDataMap[k.n.toLowerCase()] = { n: k.n, s: k.s };
+      btn.addEventListener('click', () => {
+        const ch = currentChar(k);
+        insertText(ch);
+        maybeCopy(ch);
+        if (shiftOn) { shiftOn = false; refresh(); }
+      });
+    }
+    return btn;
+  }
+
+  function buildRow(keys) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    keys.forEach(k => row.appendChild(buildKey(k)));
+    return row;
+  }
+
+  /* ── INSERT / EDIT ── */
+  function insertText(text) {
+    const s = output.selectionStart, e = output.selectionEnd;
+    output.value = output.value.slice(0, s) + text + output.value.slice(e);
+    const pos = s + text.length;
+    output.selectionStart = output.selectionEnd = pos;
+    output.focus();
+    updateCount();
+    scheduleSave();
+  }
+
+  function deleteChar(dir) {
+    const s = output.selectionStart, e = output.selectionEnd;
+    if (s !== e) {
+      output.value = output.value.slice(0, s) + output.value.slice(e);
+      output.selectionStart = output.selectionEnd = s;
+    } else if (dir < 0 && s > 0) {
+      output.value = output.value.slice(0, s - 1) + output.value.slice(s);
+      output.selectionStart = output.selectionEnd = s - 1;
+    } else if (dir > 0 && s < output.value.length) {
+      output.value = output.value.slice(0, s) + output.value.slice(s + 1);
+      output.selectionStart = output.selectionEnd = s;
+    }
+    output.focus();
+    updateCount();
+    scheduleSave();
+  }
+
+  function moveCursor(dx, dy) {
+    let pos = output.selectionStart;
+    const val = output.value;
+    if (dx !== 0) {
+      pos = Math.max(0, Math.min(val.length, pos + dx));
+    } else if (dy < 0) {
+      // up: find same column on previous line
+      const before = val.slice(0, pos);
+      const lineStart = before.lastIndexOf('\n') + 1;
+      const col = pos - lineStart;
+      const prevLineEnd = lineStart - 1;
+      if (prevLineEnd >= 0) {
+        const prevLineStart = val.lastIndexOf('\n', prevLineEnd - 1) + 1;
+        pos = Math.min(prevLineStart + col, prevLineEnd);
+      }
+    } else if (dy > 0) {
+      const lineEnd = val.indexOf('\n', pos);
+      if (lineEnd !== -1) {
+        const before = val.slice(0, pos);
+        const lineStart = before.lastIndexOf('\n') + 1;
+        const col = pos - lineStart;
+        const nextLineStart = lineEnd + 1;
+        const nextLineEnd = val.indexOf('\n', nextLineStart);
+        pos = nextLineEnd === -1
+          ? Math.min(nextLineStart + col, val.length)
+          : Math.min(nextLineStart + col, nextLineEnd);
+      }
+    }
+    output.selectionStart = output.selectionEnd = pos;
+    output.focus();
+  }
+
+  function moveEdge(edge) {
+    const val = output.value;
+    let pos = output.selectionStart;
+    if (edge === 'start') {
+      while (pos > 0 && val[pos - 1] !== '\n') pos--;
+    } else {
+      while (pos < val.length && val[pos] !== '\n') pos++;
+    }
+    output.selectionStart = output.selectionEnd = pos;
+    output.focus();
+  }
+
+  function handleAction(k) {
+    switch (k.action) {
+      case 'backspace': deleteChar(-1); break;
+      case 'delete':    deleteChar(1); break;
+      case 'tab':       insertText('\t'); maybeCopy('\t'); break;
+      case 'enter':     insertText('\n'); maybeCopy('\n'); break;
+      case 'space':     insertText(' ');  maybeCopy(' ');  break;
+      case 'left':      moveCursor(-1, 0); break;
+      case 'right':     moveCursor(1, 0);  break;
+      case 'up':        moveCursor(0, -1); break;
+      case 'down':      moveCursor(0, 1);  break;
+      case 'home':      moveEdge('start'); break;
+      case 'end':       moveEdge('end');   break;
+      case 'capslock':  capsOn = !capsOn; refresh(); break;
+      case 'shift':     shiftOn = !shiftOn; refresh(); break;
+    }
+  }
+
+  /* ── REFRESH DISPLAY ── */
+  function refresh() {
+    document.querySelectorAll('.key[data-n]').forEach(btn => {
+      const k = { n: btn.dataset.n, s: btn.dataset.s };
+      const letter = isLetter(k.n);
+      const useShift = letter ? (capsOn !== shiftOn) : shiftOn;
+      btn.querySelector('.main-char').textContent = useShift ? k.s : k.n;
+      const sc = btn.querySelector('.shift-char');
+      if (!letter) {
+        sc.textContent = useShift ? k.n : (k.s !== k.n ? k.s : '');
+      } else {
+        sc.textContent = '';
+      }
+    });
+    // highlight shift/caps action keys
+    document.querySelectorAll('.key.action').forEach(btn => {
+      const a = btn.textContent;
+      if (a.includes('Shift')) btn.classList.toggle('is-on', shiftOn);
+      if (a.includes('Caps'))  btn.classList.toggle('is-on', capsOn);
+    });
+    shiftPill.classList.toggle('on', shiftOn);
+    capsPill.classList.toggle('on', capsOn);
+    shiftPill.textContent = '⇧ Shift' + (shiftOn ? ' ●' : '');
+    capsPill.textContent  = '⇪ Caps Lock' + (capsOn ? ' ●' : '');
+
+    // Apply broken/ok visual to all keys
+    applyTestedStyles();
+  }
+
+  function applyTestedStyles() {
+    Object.entries(keyBtnMap).forEach(([code, btns]) => {
+      btns.forEach(btn => {
+        btn.classList.toggle('k-ok', testedCodes.has(code) && !brokenCodes.has(code));
+        btn.classList.toggle('k-broken', brokenCodes.has(code));
+      });
+    });
+    updateBrokenBanner();
+    buildBrokenOnlyRow();
+    scheduleSave();
+  }
+
+  /* ── BROKEN BANNER ── */
+  function keyLabel(code) {
+    const btns = keyBtnMap[code];
+    if (!btns || !btns.length) return code;
+    const btn = btns[0];
+    if (btn.dataset.n) return btn.dataset.n.toUpperCase();
+    const main = btn.querySelector('.main-char');
+    if (main) return main.textContent.toUpperCase();
+    return btn.textContent.trim().slice(0, 8);
+  }
+
+  function updateBrokenBanner() {
+    const banner = document.getElementById('broken-banner');
+    const list = document.getElementById('broken-keys-list');
+    if (brokenCodes.size > 0) {
+      banner.classList.add('visible');
+      list.textContent = [...brokenCodes].map(keyLabel).join(', ');
+    } else {
+      banner.classList.remove('visible');
+    }
+  }
+
+  /* ── BROKEN-ONLY ROW (focus mode) ── */
+  function buildBrokenOnlyRow() {
+    const container = document.getElementById('kbBrokenOnly');
+    container.innerHTML = '';
+    if (brokenCodes.size === 0) return;
+    const row = document.createElement('div');
+    row.className = 'row';
+    brokenCodes.forEach(code => {
+      const srcBtns = keyBtnMap[code];
+      if (!srcBtns || !srcBtns.length) return;
+      const src = srcBtns[0];
+      // clone a simplified version
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'key k-broken';
+      btn.style.flexGrow = 1;
+      // get label
+      let label = '';
+      if (src.dataset.n) {
+        label = src.dataset.n.toUpperCase();
+      } else {
+        const main = src.querySelector('.main-char');
+        label = main ? main.textContent : src.textContent.trim().slice(0, 8);
+      }
+      btn.textContent = label;
+      // clicking a broken-only key inserts its normal char
+      btn.addEventListener('click', () => {
+        const char = src.dataset.n || (label.length === 1 ? label.toLowerCase() : '');
+        if (char) { insertText(char); maybeCopy(char); }
+      });
+      row.appendChild(btn);
+    });
+    container.appendChild(row);
+  }
+
+  /* ── AUTO-COPY ── */
+  async function maybeCopy(ch) {
+    if (!autoCopyOn) return;
+    let label = ch === ' ' ? '⎵ Spasi' : ch === '\t' ? '⇥ Tab' : ch === '\n' ? '⏎ Enter' : `"${ch}"`;
+    try {
+      await navigator.clipboard.writeText(ch);
+      showToast('🔁 ' + label + ' disalin', 'ok');
+    } catch {
+      showToast('⚠️ Gagal menyalin', 'bad');
+    }
+  }
+
+  /* ── COUNT ── */
+  function updateCount() {
+    const n = output.value.length;
+    const words = output.value.trim() === '' ? 0 : output.value.trim().split(/\s+/).length;
+    charCount.textContent = n + ' karakter · ' + words + ' kata';
+  }
+
+  /* ── TOAST ── */
+  let toastTimer;
+  function showToast(msg, type) {
+    toast.textContent = msg;
+    toast.className = 'show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.className = '', 1800);
+  }
+
+  /* ── KEYBOARD TESTER ── */
+  window.addEventListener('keydown', e => {
+    const btns = keyBtnMap[e.code];
+    if (btns) btns.forEach(b => { b.classList.add('k-pressing'); b.classList.remove('k-broken'); });
+    if (!testedCodes.has(e.code)) {
+      testedCodes.add(e.code);
+      brokenCodes.delete(e.code); // if it worked, remove from broken
+      applyTestedStyles();
+    }
+    // physical Caps Lock indicator
+    if (typeof e.getModifierState === 'function') {
+      try {
+        const realCaps = e.getModifierState('CapsLock');
+        capsStatus.textContent = '⌨️ Caps Lock fisik: ' + (realCaps ? 'ON' : 'OFF');
+        capsStatus.classList.toggle('on', realCaps);
+      } catch(_) {}
+    }
+  });
+
+  window.addEventListener('keyup', e => {
+    const btns = keyBtnMap[e.code];
+    if (btns) btns.forEach(b => b.classList.remove('k-pressing'));
+  });
+
+  window.addEventListener('blur', () => {
+    document.querySelectorAll('.key.k-pressing').forEach(b => b.classList.remove('k-pressing'));
+  });
+
+  /* ── MARK BROKEN (manual) ── */
+  document.getElementById('markBrokenBtn').addEventListener('click', () => {
+    // let user mark currently focused / last clicked key, or just open instructions
+    showToast('ℹ️ Klik tombol virtual lalu pilih "Tandai Rusak" — atau tekan 5× tanpa respons', '');
+    // Actually, track keys that user presses 0 times but clicks virtual for
+    // We implement: tekan tombol fisik berulang kali tanpa menyala di keyboard virtual = bisa diandai melalui prompt
+    const code = prompt('Ketik kode tombol yang rusak (contoh: KeyA, Space, Enter, Backspace):');
+    if (code && code.trim()) {
+      const c = code.trim();
+      brokenCodes.add(c);
+      testedCodes.delete(c);
+      applyTestedStyles();
+      showToast('✕ Ditandai rusak: ' + c, 'bad');
+    }
+  });
+
+  document.getElementById('resetTestBtn').addEventListener('click', () => {
+    testedCodes.clear();
+    brokenCodes.clear();
+    applyTestedStyles();
+    saveStorage();
+    showToast('↺ Hasil tes direset', '');
+  });
+
+  /* ── SHIFT/CAPS PILLS ── */
+  shiftPill.addEventListener('click', () => { shiftOn = !shiftOn; refresh(); });
+  capsPill.addEventListener('click',  () => { capsOn  = !capsOn;  refresh(); });
+
+  /* ── AUTO-COPY BUTTONS ── */
+  function toggleAutoCopy() {
+    autoCopyOn = !autoCopyOn;
+    const lbl = '🔁 Auto-Salin: ' + (autoCopyOn ? 'On' : 'Off');
+    document.getElementById('autoCopyBtn').textContent = lbl;
+    document.getElementById('autoCopyBtn2').textContent = lbl;
+    document.getElementById('autoCopyBtn').classList.toggle('active', autoCopyOn);
+    document.getElementById('autoCopyBtn2').classList.toggle('active', autoCopyOn);
+    showToast(autoCopyOn ? '🔁 Auto-Salin aktif' : '🔁 Auto-Salin off', autoCopyOn ? 'ok' : '');
+  }
+  document.getElementById('autoCopyBtn').addEventListener('click', toggleAutoCopy);
+  document.getElementById('autoCopyBtn2').addEventListener('click', toggleAutoCopy);
+
+  /* ── COPY ALL ── */
+  async function copyAll() {
+    try {
+      await navigator.clipboard.writeText(output.value);
+      showToast('✅ Teks disalin!', 'ok');
+    } catch {
+      output.select();
+      document.execCommand('copy');
+      showToast('✅ Teks disalin!', 'ok');
+    }
+  }
+  document.getElementById('copyBtn').addEventListener('click', copyAll);
+  document.getElementById('copyBtnFocus').addEventListener('click', copyAll);
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (output.value && !confirm('Hapus semua teks?')) return;
+    output.value = '';
+    updateCount();
+    scheduleSave();
+    output.focus();
+  });
+
+  /* ── FOCUS MODE ── */
+  function enterFocus() {
+    focusMode = true;
+    document.body.classList.add('focus-mode');
+    buildBrokenOnlyRow();
+    output.focus();
+    showToast('⛶ Mode Fokus aktif', '');
+  }
+  function exitFocus() {
+    focusMode = false;
+    document.body.classList.remove('focus-mode');
+    showToast('⛶ Mode Fokus nonaktif', '');
+  }
+  document.getElementById('focusModeBtn').addEventListener('click', enterFocus);
+  document.getElementById('focusModeBtn2').addEventListener('click', enterFocus);
+  document.getElementById('exitFocusBtn').addEventListener('click', exitFocus);
+
+  // ESC exits focus mode
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && focusMode) exitFocus();
+  });
+
+  /* ── REPORT ── */
+  function openReport() {
+    const modal = document.getElementById('report-modal');
+    const ua = navigator.userAgent;
+    let os = 'Unknown';
+    if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+    else if (/Mac OS X/.test(ua)) os = 'macOS';
+    else if (/Android/.test(ua)) os = 'Android';
+    else if (/iPhone|iPad/.test(ua)) os = 'iOS';
+    else if (/Linux/.test(ua)) os = 'Linux';
+
+    document.getElementById('report-sys-info').textContent =
+      'OS: ' + os + ' · Browser: ' + (navigator.userAgent.includes('Chrome') ? 'Chrome' :
+        navigator.userAgent.includes('Firefox') ? 'Firefox' :
+        navigator.userAgent.includes('Safari') ? 'Safari' : 'Lainnya') +
+      ' · ' + new Date().toLocaleString('id-ID');
+
+    const allCodes = Object.keys(keyBtnMap);
+    const okCodes = allCodes.filter(c => testedCodes.has(c) && !brokenCodes.has(c));
+    const badCodes = [...brokenCodes];
+    const notTestedCodes = allCodes.filter(c => !testedCodes.has(c) && !brokenCodes.has(c));
+
+    document.getElementById('rTotal').textContent = allCodes.length;
+    document.getElementById('rOk').textContent = okCodes.length;
+    document.getElementById('rBroken').textContent = badCodes.length;
+
+    const rBrokenList = document.getElementById('rBrokenList');
+    const rOkList = document.getElementById('rOkList');
+    rBrokenList.innerHTML = '';
+    rOkList.innerHTML = '';
+
+    if (badCodes.length === 0) {
+      rBrokenList.innerHTML = '<span style="color:var(--text-muted);font-size:.78rem">Tidak ada tombol yang ditandai rusak.</span>';
+    } else {
+      badCodes.forEach(c => {
+        const el = document.createElement('span');
+        el.className = 'report-key broken';
+        el.textContent = keyLabel(c);
+        rBrokenList.appendChild(el);
+      });
+    }
+
+    if (okCodes.length === 0) {
+      rOkList.innerHTML = '<span style="color:var(--text-muted);font-size:.78rem">Belum ada tombol yang diuji.</span>';
+    } else {
+      okCodes.forEach(c => {
+        const el = document.createElement('span');
+        el.className = 'report-key ok';
+        el.textContent = keyLabel(c);
+        rOkList.appendChild(el);
+      });
+    }
+
+    const n = output.value.length;
+    const words = output.value.trim() === '' ? 0 : output.value.trim().split(/\s+/).length;
+    document.getElementById('rTextMeta').textContent =
+      n + ' karakter · ' + words + ' kata · ' + (n > 0 ? 'Ada konten tersimpan' : 'Kosong');
+
+    modal.classList.add('open');
+  }
+
+  function copyReport() {
+    const ua = navigator.userAgent;
+    let os = 'Unknown';
+    if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+    else if (/Mac OS X/.test(ua)) os = 'macOS';
+    else if (/Android/.test(ua)) os = 'Android';
+    else if (/Linux/.test(ua)) os = 'Linux';
+
+    const allCodes = Object.keys(keyBtnMap);
+    const okCodes = allCodes.filter(c => testedCodes.has(c) && !brokenCodes.has(c));
+    const badCodes = [...brokenCodes];
+
+    const report = [
+      '=== LAPORAN KEYBOARD — Papan Ketik Cadangan ===',
+      'Tanggal: ' + new Date().toLocaleString('id-ID'),
+      'OS: ' + os,
+      '',
+      '📊 RINGKASAN',
+      'Total tombol: ' + allCodes.length,
+      'Berfungsi: ' + okCodes.length,
+      'Rusak/tidak respons: ' + badCodes.length,
+      '',
+      '✕ TOMBOL RUSAK',
+      badCodes.length > 0 ? badCodes.map(keyLabel).join(', ') : '(tidak ada)',
+      '',
+      '✓ TOMBOL BERFUNGSI',
+      okCodes.length > 0 ? okCodes.map(keyLabel).join(', ') : '(belum diuji)',
+      '',
+      '=== KONTEN TEKS (' + output.value.length + ' karakter) ===',
+      output.value.slice(0, 200) + (output.value.length > 200 ? '…' : '')
+    ].join('\n');
+
+    navigator.clipboard.writeText(report)
+      .then(() => showToast('📋 Laporan disalin!', 'ok'))
+      .catch(() => showToast('⚠️ Gagal menyalin laporan', 'bad'));
+  }
+
+  document.getElementById('reportBtn').addEventListener('click', openReport);
+  document.getElementById('reportBtn2').addEventListener('click', openReport);
+  document.getElementById('rCloseBtn').addEventListener('click', () => {
+    document.getElementById('report-modal').classList.remove('open');
+  });
+  document.getElementById('rCopyBtn').addEventListener('click', copyReport);
+  document.getElementById('report-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('report-modal'))
+      document.getElementById('report-modal').classList.remove('open');
+  });
+
+  /* ── PHYSICAL KEYBOARD → TEXTAREA ── */
+  output.addEventListener('keydown', e => {
+    if (e.key.length !== 1) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!shiftOn && !capsOn) return;
+    const mapping = keyDataMap[e.key.toLowerCase()];
+    if (!mapping) return;
+    e.preventDefault();
+    const letter = isLetter(mapping.n);
+    const useShift = letter ? (capsOn !== shiftOn) : shiftOn;
+    insertText(useShift ? mapping.s : mapping.n);
+    if (shiftOn) { shiftOn = false; refresh(); }
+  });
+
+  output.addEventListener('input', () => { updateCount(); scheduleSave(); });
+
+  /* ── BUILD KEYBOARD ── */
+  const kbMain = document.getElementById('kbMain');
+  kbMain.appendChild(buildRow(ROW1));
+  kbMain.appendChild(buildRow(ROW2));
+  kbMain.appendChild(buildRow(ROW3));
+  kbMain.appendChild(buildRow(ROW4));
+
+  const kbSym = document.getElementById('kbSym');
+  kbSym.appendChild(buildRow(SYMS.map(s => ({ symbol: s }))));
+
+  const kbNav = document.getElementById('kbNav');
+  kbNav.appendChild(buildRow(ROW6));
+
+  /* ── BOOKMARK SHORTCUT HINT (keyboard shortcut Ctrl+D) ── */
+  window.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      // Let browser's native bookmark happen, just show toast after a tick
+      setTimeout(() => showToast('🔖 Ditambahkan ke bookmark!', 'ok'), 300);
+    }
+  });
+
+  /* ── INIT ── */
+  detectSystem();
+  loadStorage();
+  refresh();
+  updateCount();
+  applyTestedStyles();
+  output.focus();
+
+})();
+</script>
+</body>
+</html>
