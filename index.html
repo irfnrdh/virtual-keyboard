@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Papan Ketik Cadangan — Keyboard Virtual untuk Keyboard Rusak</title>
+<title>Papan Ketik Cadangan — Keyboard Virtual & Tester untuk Keyboard Rusak</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -190,6 +190,25 @@
   }
   .key.is-active .shift-char{color:rgba(26,19,5,.65);}
 
+  /* Keyboard tester states */
+  .key{position:relative;}
+  .key.key-active{
+    background:var(--success) !important;
+    border-color:var(--success) !important;
+    color:#0c1f14 !important;
+    transform:translateY(1px) scale(.97);
+    box-shadow:0 0 0 3px rgba(111,207,151,.25);
+  }
+  .key.key-tested::after{
+    content:'';
+    position:absolute;
+    top:4px; right:4px;
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--success);
+    box-shadow:0 0 0 2px rgba(0,0,0,.25);
+  }
+
   .status-bar{
     margin-top:14px;
     display:flex;
@@ -224,6 +243,32 @@
     color:var(--text-muted);
     line-height:1.5;
     flex:1 1 220px;
+  }
+
+  .tester-bar{margin-top:8px;}
+  .legend{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:var(--mono);
+    font-size:.75rem;
+    color:var(--text-muted);
+    white-space:nowrap;
+  }
+  .dot{
+    display:inline-block;
+    width:9px;height:9px;border-radius:50%;
+    background:var(--success);
+    flex:none;
+  }
+  .dot-tested{box-shadow:0 0 0 2px rgba(0,0,0,.25);}
+  .dot-active{box-shadow:0 0 0 3px rgba(111,207,151,.25);}
+  .legend.on-real{
+    color:var(--accent);
+    font-weight:600;
+  }
+  .btn.small{
+    padding:6px 12px;
+    font-size:.78rem;
+    flex:none;
   }
 
   .kb-section-label{
@@ -311,6 +356,19 @@
     <span class="status-hint">Aktifkan Shift / Caps Lock di sini, lalu ketik pakai tombol fisik <em>atau</em> klik tombol virtual di bawah. Aktifkan <strong>Auto-Salin</strong> agar setiap tombol yang diklik langsung tersalin ke clipboard.</span>
   </div>
 
+  <div class="status-bar tester-bar">
+    <span class="legend"><span class="dot dot-tested"></span> Terdeteksi berfungsi</span>
+    <span class="legend"><span class="dot dot-active"></span> Sedang ditekan</span>
+    <span class="legend" id="realCapsInfo">⌨️ Caps Lock fisik: belum dites</span>
+    <span class="status-hint">
+      🧪 <strong>Mode Tes Keyboard</strong>: tekan tombol fisik di keyboardmu satu per satu (termasuk Shift &amp; Caps Lock).
+      Tombol yang sesuai di bawah akan menyala hijau jika sinyalnya terdeteksi oleh browser. Kalau tidak menyala
+      sama sekali saat ditekan berkali-kali, kemungkinan besar tombol fisik itu yang rusak — pakai versi virtualnya.
+      Pill <strong>Shift/Caps Lock</strong> di atas adalah tombol <em>virtual</em> yang kamu kontrol sendiri, terpisah dari status fisik ini.
+    </span>
+    <button class="btn ghost small" id="resetTestBtn" type="button">↺ Reset Tes</button>
+  </div>
+
   <div class="kb-section-label">Tombol Karakter</div>
   <div class="keyboard" id="keyboard">
     <div class="kb-inner" id="kbInner"></div>
@@ -337,6 +395,7 @@
   let capsOn = false;
   let autoCopyOn = false;
   const KEY_MAP = {}; // lowercase normal char -> {n, s}, for physical keyboard support
+  const CODE_MAP = {}; // KeyboardEvent.code -> [button(s)], for keyboard tester
 
   const shiftPill = document.getElementById('shiftPill');
   const capsPill = document.getElementById('capsPill');
@@ -345,44 +404,44 @@
   // ---- Keyboard layout definition ----
   // n = normal char, s = shift char. Letters get caps-lock treatment too.
   const ROW1 = [
-    {n:'`',s:'~'},{n:'1',s:'!'},{n:'2',s:'@'},{n:'3',s:'#'},{n:'4',s:'$'},
-    {n:'5',s:'%'},{n:'6',s:'^'},{n:'7',s:'&'},{n:'8',s:'*'},{n:'9',s:'('},
-    {n:'0',s:')'},{n:'-',s:'_'},{n:'=',s:'+'},
-    {action:'backspace', label:'⌫\nBackspace', flex:1.8}
+    {n:'`',s:'~',code:'Backquote'},{n:'1',s:'!',code:'Digit1'},{n:'2',s:'@',code:'Digit2'},{n:'3',s:'#',code:'Digit3'},{n:'4',s:'$',code:'Digit4'},
+    {n:'5',s:'%',code:'Digit5'},{n:'6',s:'^',code:'Digit6'},{n:'7',s:'&',code:'Digit7'},{n:'8',s:'*',code:'Digit8'},{n:'9',s:'(',code:'Digit9'},
+    {n:'0',s:')',code:'Digit0'},{n:'-',s:'_',code:'Minus'},{n:'=',s:'+',code:'Equal'},
+    {action:'backspace', label:'⌫\nBackspace', flex:1.8, code:'Backspace'}
   ];
 
   const ROW2 = [
-    {action:'tab', label:'⇥\nTab', insert:'\t', flex:1.4},
-    {n:'q',s:'Q'},{n:'w',s:'W'},{n:'e',s:'E'},{n:'r',s:'R'},{n:'t',s:'T'},
-    {n:'y',s:'Y'},{n:'u',s:'U'},{n:'i',s:'I'},{n:'o',s:'O'},{n:'p',s:'P'},
-    {n:'[',s:'{'},{n:']',s:'}'},{n:'\\',s:'|'}
+    {action:'tab', label:'⇥\nTab', insert:'\t', flex:1.4, code:'Tab'},
+    {n:'q',s:'Q',code:'KeyQ'},{n:'w',s:'W',code:'KeyW'},{n:'e',s:'E',code:'KeyE'},{n:'r',s:'R',code:'KeyR'},{n:'t',s:'T',code:'KeyT'},
+    {n:'y',s:'Y',code:'KeyY'},{n:'u',s:'U',code:'KeyU'},{n:'i',s:'I',code:'KeyI'},{n:'o',s:'O',code:'KeyO'},{n:'p',s:'P',code:'KeyP'},
+    {n:'[',s:'{',code:'BracketLeft'},{n:']',s:'}',code:'BracketRight'},{n:'\\',s:'|',code:'Backslash'}
   ];
 
   const ROW3 = [
-    {action:'capslock', label:'⇪\nCaps', flex:1.7},
-    {n:'a',s:'A'},{n:'s',s:'S'},{n:'d',s:'D'},{n:'f',s:'F'},{n:'g',s:'G'},
-    {n:'h',s:'H'},{n:'j',s:'J'},{n:'k',s:'K'},{n:'l',s:'L'},
-    {n:';',s:':'},{n:"'",s:'"'},
-    {action:'enter', label:'⏎\nEnter', insert:'\n', flex:1.9}
+    {action:'capslock', label:'⇪\nCaps', flex:1.7, code:'CapsLock'},
+    {n:'a',s:'A',code:'KeyA'},{n:'s',s:'S',code:'KeyS'},{n:'d',s:'D',code:'KeyD'},{n:'f',s:'F',code:'KeyF'},{n:'g',s:'G',code:'KeyG'},
+    {n:'h',s:'H',code:'KeyH'},{n:'j',s:'J',code:'KeyJ'},{n:'k',s:'K',code:'KeyK'},{n:'l',s:'L',code:'KeyL'},
+    {n:';',s:':',code:'Semicolon'},{n:"'",s:'"',code:'Quote'},
+    {action:'enter', label:'⏎\nEnter', insert:'\n', flex:1.9, code:'Enter'}
   ];
 
   const ROW4 = [
-    {action:'shift', label:'⇧\nShift', flex:2.1},
-    {n:'z',s:'Z'},{n:'x',s:'X'},{n:'c',s:'C'},{n:'v',s:'V'},{n:'b',s:'B'},
-    {n:'n',s:'N'},{n:'m',s:'M'},{n:',',s:'<'},{n:'.',s:'>'},{n:'/',s:'?'},
-    {action:'shift', label:'⇧\nShift', flex:2.1}
+    {action:'shift', label:'⇧\nShift', flex:2.1, code:'ShiftLeft'},
+    {n:'z',s:'Z',code:'KeyZ'},{n:'x',s:'X',code:'KeyX'},{n:'c',s:'C',code:'KeyC'},{n:'v',s:'V',code:'KeyV'},{n:'b',s:'B',code:'KeyB'},
+    {n:'n',s:'N',code:'KeyN'},{n:'m',s:'M',code:'KeyM'},{n:',',s:'<',code:'Comma'},{n:'.',s:'>',code:'Period'},{n:'/',s:'?',code:'Slash'},
+    {action:'shift', label:'⇧\nShift', flex:2.1, code:'ShiftRight'}
   ];
 
   // Symbols often missing on broken keyboards / not on the standard layout
   const ROW5_SYMBOLS = ['€','£','¥','©','®','™','°','×','÷','—','–','…','“','”','‘','’','•','§','¶','±','≈','≠','→','←','✓'];
 
   const ROW6 = [
-    {action:'left', label:'←', flex:1},
-    {action:'home', label:'Home', flex:1.3},
-    {action:'space', label:'SPASI', insert:' ', flex:6},
-    {action:'end', label:'End', flex:1.3},
-    {action:'delete', label:'Del', flex:1.2},
-    {action:'right', label:'→', flex:1}
+    {action:'left', label:'←', flex:1, code:'ArrowLeft'},
+    {action:'home', label:'Home', flex:1.3, code:'Home'},
+    {action:'space', label:'SPASI', insert:' ', flex:6, code:'Space'},
+    {action:'end', label:'End', flex:1.3, code:'End'},
+    {action:'delete', label:'Del', flex:1.2, code:'Delete'},
+    {action:'right', label:'→', flex:1, code:'ArrowRight'}
   ];
 
   function buildRow(keys, extraClass){
@@ -397,6 +456,11 @@
     btn.type = 'button';
     btn.className = 'key' + (extraClass ? ' ' + extraClass : '');
     if (k.flex) btn.style.flexGrow = k.flex;
+    if (k.code){
+      btn.dataset.code = k.code;
+      if (!CODE_MAP[k.code]) CODE_MAP[k.code] = [];
+      CODE_MAP[k.code].push(btn);
+    }
 
     if (k.action){
       btn.classList.add('action');
@@ -643,6 +707,46 @@
   });
 
   output.addEventListener('input', updateCount);
+
+  // ---- Keyboard tester: highlight matching virtual key on physical keypress ----
+  const realCapsInfo = document.getElementById('realCapsInfo');
+
+  function updateRealCapsBadge(e){
+    if (typeof e.getModifierState !== 'function') return;
+    let realCaps;
+    try { realCaps = e.getModifierState('CapsLock'); } catch(err){ return; }
+    realCapsInfo.textContent = '⌨️ Caps Lock fisik: ' + (realCaps ? 'ON' : 'OFF');
+    realCapsInfo.classList.toggle('on-real', realCaps);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    const btns = CODE_MAP[e.code];
+    if (btns){
+      btns.forEach(btn => {
+        btn.classList.add('key-active');
+        btn.classList.add('key-tested');
+      });
+    }
+    updateRealCapsBadge(e);
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const btns = CODE_MAP[e.code];
+    if (btns){
+      btns.forEach(btn => btn.classList.remove('key-active'));
+    }
+    updateRealCapsBadge(e);
+  });
+
+  // Some browsers fire 'blur' instead of 'keyup' when a key combo switches focus/app
+  window.addEventListener('blur', () => {
+    document.querySelectorAll('.key.key-active').forEach(btn => btn.classList.remove('key-active'));
+  });
+
+  document.getElementById('resetTestBtn').addEventListener('click', () => {
+    document.querySelectorAll('.key.key-tested').forEach(btn => btn.classList.remove('key-tested'));
+    showToast('🧪 Hasil tes direset');
+  });
 
   refreshDisplay();
   updateCount();
