@@ -327,10 +327,10 @@
       </svg>
       Papan Ketik Cadangan
     </div>
-    <h1>Keyboard virtual untuk keyboard yang rusak</h1>
+    <h1>Keyboard virtual dan Tester untuk keyboard yang rusak</h1>
     <p class="lead">
       Klik tombol-tombol di bawah seperti keyboard biasa. Hasil ketikan akan
-      muncul di kotak teks — tinggal salin (copy) lalu tempel (paste) ke aplikasi
+      muncul di kotak teks tinggal salin (copy) lalu tempel (paste) ke aplikasi
       lain. Tombol fisik yang masih berfungsi tetap bisa dipakai langsung di
       kotak teks.
     </p>
@@ -350,13 +350,22 @@
     </div>
   </section>
 
-  <div class="status-bar" id="statusBar">
+
+
+ 
+  <div class="kb-section-label">Tombol Karakter</div>
+  <div class="keyboard" id="keyboard">
+    <div class="kb-inner" id="kbInner"></div>
+  </div>
+
+
+    <div class="status-bar" id="statusBar">
     <span class="status-pill" id="shiftPill">⇧ Shift: Off</span>
     <span class="status-pill" id="capsPill">⇪ Caps Lock: Off</span>
     <span class="status-hint">Aktifkan Shift / Caps Lock di sini, lalu ketik pakai tombol fisik <em>atau</em> klik tombol virtual di bawah. Aktifkan <strong>Auto-Salin</strong> agar setiap tombol yang diklik langsung tersalin ke clipboard.</span>
   </div>
-
-  <div class="status-bar tester-bar">
+  
+   <div class="status-bar tester-bar">
     <span class="legend"><span class="dot dot-tested"></span> Terdeteksi berfungsi</span>
     <span class="legend"><span class="dot dot-active"></span> Sedang ditekan</span>
     <span class="legend" id="realCapsInfo">⌨️ Caps Lock fisik: belum dites</span>
@@ -369,11 +378,8 @@
     <button class="btn ghost small" id="resetTestBtn" type="button">↺ Reset Tes</button>
   </div>
 
-  <div class="kb-section-label">Tombol Karakter</div>
-  <div class="keyboard" id="keyboard">
-    <div class="kb-inner" id="kbInner"></div>
-  </div>
 
+  
   <footer>
     Dibuat untuk membantu mengetik saat keyboard fisik rusak atau ada tombol yang tidak berfungsi.<br>
     Catatan: tombol <strong>Fn</strong> tidak bisa dideteksi oleh halaman web mana pun (bekerja di level chip keyboard, bukan dikirim ke browser) — gunakan tombol <strong>Home / End / Delete / ←→</strong> di keyboard virtual sebagai gantinya.<br>
