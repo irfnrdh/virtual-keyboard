@@ -301,13 +301,14 @@
       <button class="btn primary" id="copyBtn" type="button">📋 Salin Semua</button>
       <button class="btn" id="clearBtn" type="button">🗑 Bersihkan</button>
       <button class="btn ghost" id="capsToggle" type="button">⇪ Caps Lock: Off</button>
+      <button class="btn ghost" id="autoCopyToggle" type="button">🔁 Auto-Salin: Off</button>
     </div>
   </section>
 
   <div class="status-bar" id="statusBar">
     <span class="status-pill" id="shiftPill">⇧ Shift: Off</span>
     <span class="status-pill" id="capsPill">⇪ Caps Lock: Off</span>
-    <span class="status-hint">Aktifkan Shift / Caps Lock di sini, lalu ketik pakai tombol fisik <em>atau</em> klik tombol virtual di bawah.</span>
+    <span class="status-hint">Aktifkan Shift / Caps Lock di sini, lalu ketik pakai tombol fisik <em>atau</em> klik tombol virtual di bawah. Aktifkan <strong>Auto-Salin</strong> agar setiap tombol yang diklik langsung tersalin ke clipboard.</span>
   </div>
 
   <div class="kb-section-label">Tombol Karakter</div>
@@ -334,10 +335,12 @@
 
   let shiftOn = false;
   let capsOn = false;
+  let autoCopyOn = false;
   const KEY_MAP = {}; // lowercase normal char -> {n, s}, for physical keyboard support
 
   const shiftPill = document.getElementById('shiftPill');
   const capsPill = document.getElementById('capsPill');
+  const autoCopyToggle = document.getElementById('autoCopyToggle');
 
   // ---- Keyboard layout definition ----
   // n = normal char, s = shift char. Letters get caps-lock treatment too.
@@ -412,7 +415,7 @@
     } else if (k.symbol !== undefined){
       btn.classList.add('symbol');
       btn.textContent = k.symbol;
-      btn.addEventListener('click', () => insertText(k.symbol));
+      btn.addEventListener('click', () => { insertText(k.symbol); copyChar(k.symbol); });
     } else {
       // normal letter / number / punctuation key with optional shift char
       const shiftSpan = document.createElement('span');
@@ -429,6 +432,7 @@
       btn.addEventListener('click', () => {
         const ch = currentChar(k);
         insertText(ch);
+        copyChar(ch);
         if (shiftOn){ shiftOn = false; refreshDisplay(); }
       });
     }
@@ -477,9 +481,9 @@
     switch(k.action){
       case 'backspace': deleteAround(-1); break;
       case 'delete': deleteAround(1); break;
-      case 'tab': insertText('\t'); break;
-      case 'enter': insertText('\n'); break;
-      case 'space': insertText(' '); break;
+      case 'tab': insertText('\t'); copyChar('\t'); break;
+      case 'enter': insertText('\n'); copyChar('\n'); break;
+      case 'space': insertText(' '); copyChar(' '); break;
       case 'capslock': capsOn = !capsOn; refreshDisplay(); break;
       case 'shift': shiftOn = !shiftOn; refreshDisplay(); break;
       case 'left': moveCursor(-1); break;
@@ -497,6 +501,20 @@
     output.selectionStart = output.selectionEnd = pos;
     output.focus();
     updateCount();
+  }
+
+  async function copyChar(ch){
+    if (!autoCopyOn) return;
+    let label = ch;
+    if (ch === ' ') label = 'Spasi';
+    else if (ch === '\t') label = 'Tab';
+    else if (ch === '\n') label = 'Enter';
+    try{
+      await navigator.clipboard.writeText(ch);
+      showToast('🔁 "' + label + '" disalin');
+    }catch(e){
+      showToast('⚠️ Gagal menyalin "' + label + '"');
+    }
   }
 
   function deleteAround(direction){
@@ -596,6 +614,13 @@
   capsPill.addEventListener('click', () => {
     capsOn = !capsOn;
     refreshDisplay();
+  });
+
+  autoCopyToggle.addEventListener('click', () => {
+    autoCopyOn = !autoCopyOn;
+    autoCopyToggle.textContent = '🔁 Auto-Salin: ' + (autoCopyOn ? 'On' : 'Off');
+    autoCopyToggle.classList.toggle('primary', autoCopyOn);
+    showToast(autoCopyOn ? '🔁 Auto-Salin aktif: setiap tombol diklik akan tersalin' : '🔁 Auto-Salin dimatikan');
   });
 
   // Apply Shift / Caps Lock state (toggled via virtual keys or pills)
