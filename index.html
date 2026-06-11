@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Papan Ketik Cadangan — Keyboard Virtual untuk Keyboard Rusak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14161b;
+    --panel:#1b1f26;
+    --key:#242a33;
+    --key-hover:#2e3642;
+    --key-active:#f0a868;
+    --key-active-text:#1a1305;
+    --accent:#f0a868;
+    --accent-soft:rgba(240,168,104,.14);
+    --text:#eae7e1;
+    --text-muted:#8d93a0;
+    --border:#2c323d;
+    --success:#6fcf97;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+    --display:'Sora', system-ui, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(240,168,104,.07), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--display);
+    padding:20px 14px 60px;
+    -webkit-text-size-adjust:100%;
+  }
+
+  .wrap{max-width:920px;margin:0 auto;}
+
+  header{margin-bottom:18px;}
+  .crumb{
+    display:flex;align-items:center;gap:10px;
+    color:var(--accent);font-family:var(--mono);
+    font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .crumb svg{flex:none;}
+  h1{
+    font-size:clamp(1.4rem,4.5vw,2rem);
+    margin:0 0 6px;
+    font-weight:700;
+    line-height:1.25;
+  }
+  p.lead{
+    color:var(--text-muted);
+    margin:0;
+    font-size:.95rem;
+    line-height:1.6;
+    max-width:62ch;
+  }
+
+  /* output / "screen" */
+  .screen{
+    margin-top:20px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+  }
+  .screen-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:8px;flex-wrap:wrap;gap:8px;
+  }
+  .screen-title{
+    font-family:var(--mono);
+    font-size:.75rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+  }
+  .char-count{
+    font-family:var(--mono);
+    font-size:.75rem;
+    color:var(--text-muted);
+  }
+  textarea{
+    width:100%;
+    min-height:140px;
+    resize:vertical;
+    background:#0e1014;
+    border:1px solid var(--border);
+    border-radius:10px;
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:1.05rem;
+    line-height:1.6;
+    padding:14px;
+    outline:none;
+    caret-color:var(--accent);
+  }
+  textarea:focus{border-color:var(--accent);}
+
+  .toolbar{
+    display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;
+  }
+  .btn{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:.9rem;
+    border:1px solid var(--border);
+    background:var(--key);
+    color:var(--text);
+    padding:10px 18px;
+    border-radius:9px;
+    cursor:pointer;
+    transition:background .12s ease, border-color .12s ease, transform .05s ease;
+  }
+  .btn:hover{background:var(--key-hover);}
+  .btn:active{transform:translateY(1px);}
+  .btn.primary{
+    background:var(--accent);
+    color:var(--key-active-text);
+    border-color:var(--accent);
+  }
+  .btn.primary:hover{filter:brightness(1.05);}
+  .btn.ghost{background:transparent;}
+
+  /* keyboard */
+  .keyboard{
+    margin-top:22px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px;
+    overflow-x:auto;
+  }
+  .kb-inner{
+    min-width:560px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .row{
+    display:flex;
+    gap:6px;
+  }
+  .key{
+    flex:1 1 0;
+    min-width:0;
+    height:clamp(40px,7.6vw,52px);
+    background:var(--key);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--mono);
+    font-size:clamp(.7rem,2.4vw,1rem);
+    line-height:1.1;
+    padding:2px 4px;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    transition:background .08s ease, border-color .08s ease, transform .04s ease;
+  }
+  .key:hover{background:var(--key-hover);border-color:#3a4250;}
+  .key:active{transform:translateY(1px) scale(.98);}
+  .key.action{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:clamp(.62rem,2vw,.8rem);
+    color:var(--text-muted);
+  }
+  .key.symbol{font-size:clamp(.85rem,2.6vw,1.15rem);}
+  .key .shift-char{
+    font-size:.72em;
+    color:var(--text-muted);
+    height:1em;
+  }
+  .key.is-active{
+    background:var(--key-active);
+    border-color:var(--key-active);
+    color:var(--key-active-text);
+  }
+  .key.is-active .shift-char{color:rgba(26,19,5,.65);}
+
+  .status-bar{
+    margin-top:14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px 14px;
+  }
+  .status-pill{
+    font-family:var(--mono);
+    font-size:.8rem;
+    font-weight:500;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:var(--key);
+    color:var(--text-muted);
+    transition:background .12s ease, color .12s ease, border-color .12s ease;
+    cursor:pointer;
+    user-select:none;
+  }
+  .status-pill.on{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:var(--key-active-text);
+  }
+  .status-hint{
+    font-size:.78rem;
+    color:var(--text-muted);
+    line-height:1.5;
+    flex:1 1 220px;
+  }
+
+  .kb-section-label{
+    font-family:var(--mono);
+    font-size:.68rem;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    margin:14px 0 4px;
+  }
+
+  /* toast */
+  #toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translate(-50%, 20px);
+    background:var(--success);
+    color:#0c1f14;
+    font-family:var(--display);
+    font-weight:600;
+    font-size:.9rem;
+    padding:10px 18px;
+    border-radius:999px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+
+  footer{
+    margin-top:24px;
+    color:var(--text-muted);
+    font-size:.8rem;
+    line-height:1.7;
+    text-align:center;
+  }
+  footer a{color:var(--accent);text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
+
+  @media (max-width:480px){
+    .kb-inner{min-width:520px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="crumb">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M9 9.5L11.5 12L9 14.5M14 9.5L11.5 12L14 14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Papan Ketik Cadangan
+    </div>
+    <h1>Keyboard virtual untuk keyboard yang rusak</h1>
+    <p class="lead">
+      Klik tombol-tombol di bawah seperti keyboard biasa. Hasil ketikan akan
+      muncul di kotak teks — tinggal salin (copy) lalu tempel (paste) ke aplikasi
+      lain. Tombol fisik yang masih berfungsi tetap bisa dipakai langsung di
+      kotak teks.
+    </p>
+  </header>
+
+  <section class="screen">
+    <div class="screen-head">
+      <span class="screen-title">Hasil Ketikan</span>
+      <span class="char-count" id="charCount">0 karakter</span>
+    </div>
+    <textarea id="output" placeholder="Mulai ketik di sini, atau klik tombol keyboard di bawah…" autofocus></textarea>
+    <div class="toolbar">
+      <button class="btn primary" id="copyBtn" type="button">📋 Salin Semua</button>
+      <button class="btn" id="clearBtn" type="button">🗑 Bersihkan</button>
+      <button class="btn ghost" id="capsToggle" type="button">⇪ Caps Lock: Off</button>
+    </div>
+  </section>
+
+  <div class="status-bar" id="statusBar">
+    <span class="status-pill" id="shiftPill">⇧ Shift: Off</span>
+    <span class="status-pill" id="capsPill">⇪ Caps Lock: Off</span>
+    <span class="status-hint">Aktifkan Shift / Caps Lock di sini, lalu ketik pakai tombol fisik <em>atau</em> klik tombol virtual di bawah.</span>
+  </div>
+
+  <div class="kb-section-label">Tombol Karakter</div>
+  <div class="keyboard" id="keyboard">
+    <div class="kb-inner" id="kbInner"></div>
+  </div>
+
+  <footer>
+    Dibuat untuk membantu mengetik saat keyboard fisik rusak atau ada tombol yang tidak berfungsi.<br>
+    Catatan: tombol <strong>Fn</strong> tidak bisa dideteksi oleh halaman web mana pun (bekerja di level chip keyboard, bukan dikirim ke browser) — gunakan tombol <strong>Home / End / Delete / ←→</strong> di keyboard virtual sebagai gantinya.<br>
+    Lihat <strong>README.md</strong> untuk panduan penggunaan lebih lengkap.
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  const output = document.getElementById('output');
+  const charCount = document.getElementById('charCount');
+  const kbInner = document.getElementById('kbInner');
+  const toast = document.getElementById('toast');
+  const capsToggle = document.getElementById('capsToggle');
+
+  let shiftOn = false;
+  let capsOn = false;
+  const KEY_MAP = {}; // lowercase normal char -> {n, s}, for physical keyboard support
+
+  const shiftPill = document.getElementById('shiftPill');
+  const capsPill = document.getElementById('capsPill');
+
+  // ---- Keyboard layout definition ----
+  // n = normal char, s = shift char. Letters get caps-lock treatment too.
+  const ROW1 = [
+    {n:'`',s:'~'},{n:'1',s:'!'},{n:'2',s:'@'},{n:'3',s:'#'},{n:'4',s:'$'},
+    {n:'5',s:'%'},{n:'6',s:'^'},{n:'7',s:'&'},{n:'8',s:'*'},{n:'9',s:'('},
+    {n:'0',s:')'},{n:'-',s:'_'},{n:'=',s:'+'},
+    {action:'backspace', label:'⌫\nBackspace', flex:1.8}
+  ];
+
+  const ROW2 = [
+    {action:'tab', label:'⇥\nTab', insert:'\t', flex:1.4},
+    {n:'q',s:'Q'},{n:'w',s:'W'},{n:'e',s:'E'},{n:'r',s:'R'},{n:'t',s:'T'},
+    {n:'y',s:'Y'},{n:'u',s:'U'},{n:'i',s:'I'},{n:'o',s:'O'},{n:'p',s:'P'},
+    {n:'[',s:'{'},{n:']',s:'}'},{n:'\\',s:'|'}
+  ];
+
+  const ROW3 = [
+    {action:'capslock', label:'⇪\nCaps', flex:1.7},
+    {n:'a',s:'A'},{n:'s',s:'S'},{n:'d',s:'D'},{n:'f',s:'F'},{n:'g',s:'G'},
+    {n:'h',s:'H'},{n:'j',s:'J'},{n:'k',s:'K'},{n:'l',s:'L'},
+    {n:';',s:':'},{n:"'",s:'"'},
+    {action:'enter', label:'⏎\nEnter', insert:'\n', flex:1.9}
+  ];
+
+  const ROW4 = [
+    {action:'shift', label:'⇧\nShift', flex:2.1},
+    {n:'z',s:'Z'},{n:'x',s:'X'},{n:'c',s:'C'},{n:'v',s:'V'},{n:'b',s:'B'},
+    {n:'n',s:'N'},{n:'m',s:'M'},{n:',',s:'<'},{n:'.',s:'>'},{n:'/',s:'?'},
+    {action:'shift', label:'⇧\nShift', flex:2.1}
+  ];
+
+  // Symbols often missing on broken keyboards / not on the standard layout
+  const ROW5_SYMBOLS = ['€','£','¥','©','®','™','°','×','÷','—','–','…','“','”','‘','’','•','§','¶','±','≈','≠','→','←','✓'];
+
+  const ROW6 = [
+    {action:'left', label:'←', flex:1},
+    {action:'home', label:'Home', flex:1.3},
+    {action:'space', label:'SPASI', insert:' ', flex:6},
+    {action:'end', label:'End', flex:1.3},
+    {action:'delete', label:'Del', flex:1.2},
+    {action:'right', label:'→', flex:1}
+  ];
+
+  function buildRow(keys, extraClass){
+    const row = document.createElement('div');
+    row.className = 'row';
+    keys.forEach(k => row.appendChild(buildKey(k, extraClass)));
+    return row;
+  }
+
+  function buildKey(k, extraClass){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'key' + (extraClass ? ' ' + extraClass : '');
+    if (k.flex) btn.style.flexGrow = k.flex;
+
+    if (k.action){
+      btn.classList.add('action');
+      btn.textContent = '';
+      const lines = k.label.split('\n');
+      lines.forEach((line, i) => {
+        const span = document.createElement('span');
+        span.textContent = line;
+        if (i > 0) span.style.fontSize = '0.85em';
+        btn.appendChild(span);
+      });
+      if (k.action === 'capslock' || k.action === 'shift'){
+        btn.dataset.action = k.action;
+      }
+      btn.addEventListener('click', () => handleAction(k));
+    } else if (k.symbol !== undefined){
+      btn.classList.add('symbol');
+      btn.textContent = k.symbol;
+      btn.addEventListener('click', () => insertText(k.symbol));
+    } else {
+      // normal letter / number / punctuation key with optional shift char
+      const shiftSpan = document.createElement('span');
+      shiftSpan.className = 'shift-char';
+      shiftSpan.textContent = k.s !== k.n.toUpperCase() ? k.s : '';
+      const mainSpan = document.createElement('span');
+      mainSpan.className = 'main-char';
+
+      btn.appendChild(shiftSpan);
+      btn.appendChild(mainSpan);
+      btn.dataset.normal = k.n;
+      btn.dataset.shift = k.s;
+      KEY_MAP[k.n.toLowerCase()] = {n: k.n, s: k.s};
+      btn.addEventListener('click', () => {
+        const ch = currentChar(k);
+        insertText(ch);
+        if (shiftOn){ shiftOn = false; refreshDisplay(); }
+      });
+    }
+    return btn;
+  }
+
+  function isLetter(c){ return /^[a-z]$/i.test(c); }
+
+  function currentChar(k){
+    const letter = isLetter(k.n);
+    const useShift = letter ? (capsOn !== shiftOn) : shiftOn;
+    return useShift ? k.s : k.n;
+  }
+
+  function refreshDisplay(){
+    document.querySelectorAll('.key[data-normal]').forEach(btn => {
+      const k = { n: btn.dataset.normal, s: btn.dataset.shift };
+      const main = btn.querySelector('.main-char');
+      const shiftSpan = btn.querySelector('.shift-char');
+      const letter = isLetter(k.n);
+      const useShift = letter ? (capsOn !== shiftOn) : shiftOn;
+      main.textContent = useShift ? k.s : k.n;
+      if (!letter){
+        shiftSpan.textContent = useShift ? k.n : k.s;
+      } else {
+        shiftSpan.textContent = '';
+      }
+    });
+
+    document.querySelectorAll('.key[data-action="shift"]').forEach(btn => {
+      btn.classList.toggle('is-active', shiftOn);
+    });
+    document.querySelectorAll('.key[data-action="capslock"]').forEach(btn => {
+      btn.classList.toggle('is-active', capsOn);
+    });
+    capsToggle.textContent = '⇪ Caps Lock: ' + (capsOn ? 'On' : 'Off');
+    capsToggle.classList.toggle('primary', capsOn);
+
+    shiftPill.textContent = '⇧ Shift: ' + (shiftOn ? 'On' : 'Off');
+    shiftPill.classList.toggle('on', shiftOn);
+    capsPill.textContent = '⇪ Caps Lock: ' + (capsOn ? 'On' : 'Off');
+    capsPill.classList.toggle('on', capsOn);
+  }
+
+  function handleAction(k){
+    switch(k.action){
+      case 'backspace': deleteAround(-1); break;
+      case 'delete': deleteAround(1); break;
+      case 'tab': insertText('\t'); break;
+      case 'enter': insertText('\n'); break;
+      case 'space': insertText(' '); break;
+      case 'capslock': capsOn = !capsOn; refreshDisplay(); break;
+      case 'shift': shiftOn = !shiftOn; refreshDisplay(); break;
+      case 'left': moveCursor(-1); break;
+      case 'right': moveCursor(1); break;
+      case 'home': moveLineEdge('start'); break;
+      case 'end': moveLineEdge('end'); break;
+    }
+  }
+
+  function insertText(text){
+    const start = output.selectionStart;
+    const end = output.selectionEnd;
+    output.value = output.value.slice(0, start) + text + output.value.slice(end);
+    const pos = start + text.length;
+    output.selectionStart = output.selectionEnd = pos;
+    output.focus();
+    updateCount();
+  }
+
+  function deleteAround(direction){
+    const start = output.selectionStart;
+    const end = output.selectionEnd;
+    if (start !== end){
+      output.value = output.value.slice(0, start) + output.value.slice(end);
+      output.selectionStart = output.selectionEnd = start;
+    } else if (direction < 0 && start > 0){
+      output.value = output.value.slice(0, start - 1) + output.value.slice(start);
+      output.selectionStart = output.selectionEnd = start - 1;
+    } else if (direction > 0 && start < output.value.length){
+      output.value = output.value.slice(0, start) + output.value.slice(start + 1);
+      output.selectionStart = output.selectionEnd = start;
+    }
+    output.focus();
+    updateCount();
+  }
+
+  function moveCursor(direction){
+    let pos = output.selectionStart;
+    pos = Math.max(0, Math.min(output.value.length, pos + direction));
+    output.selectionStart = output.selectionEnd = pos;
+    output.focus();
+  }
+
+  function moveLineEdge(edge){
+    const value = output.value;
+    let pos = output.selectionStart;
+    if (edge === 'start'){
+      while (pos > 0 && value[pos - 1] !== '\n') pos--;
+    } else {
+      while (pos < value.length && value[pos] !== '\n') pos++;
+    }
+    output.selectionStart = output.selectionEnd = pos;
+    output.focus();
+  }
+
+  function updateCount(){
+    const n = output.value.length;
+    charCount.textContent = n + (n === 1 ? ' karakter' : ' karakter');
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+  }
+
+  // ---- Build keyboard ----
+  kbInner.appendChild(buildRow(ROW1));
+  kbInner.appendChild(buildRow(ROW2));
+  kbInner.appendChild(buildRow(ROW3));
+  kbInner.appendChild(buildRow(ROW4));
+
+  const symLabel = document.createElement('div');
+  symLabel.className = 'kb-section-label';
+  symLabel.textContent = 'Simbol Tambahan';
+  kbInner.appendChild(symLabel);
+  kbInner.appendChild(buildRow(ROW5_SYMBOLS.map(s => ({symbol:s})), 'symbol'));
+
+  const navLabel = document.createElement('div');
+  navLabel.className = 'kb-section-label';
+  navLabel.textContent = 'Spasi & Navigasi';
+  kbInner.appendChild(navLabel);
+  kbInner.appendChild(buildRow(ROW6));
+
+  // ---- Toolbar actions ----
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText(output.value);
+      showToast('✅ Teks berhasil disalin!');
+    }catch(e){
+      output.select();
+      document.execCommand('copy');
+      showToast('✅ Teks disalin!');
+    }
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    output.value = '';
+    updateCount();
+    output.focus();
+  });
+
+  capsToggle.addEventListener('click', () => {
+    capsOn = !capsOn;
+    refreshDisplay();
+  });
+
+  shiftPill.addEventListener('click', () => {
+    shiftOn = !shiftOn;
+    refreshDisplay();
+  });
+
+  capsPill.addEventListener('click', () => {
+    capsOn = !capsOn;
+    refreshDisplay();
+  });
+
+  // Apply Shift / Caps Lock state (toggled via virtual keys or pills)
+  // to characters typed on the PHYSICAL keyboard too.
+  output.addEventListener('keydown', (e) => {
+    if (e.key.length !== 1) return; // ignore Backspace, Enter, arrows, etc. (handled natively)
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!shiftOn && !capsOn) return; // let the browser handle it normally
+
+    const mapping = KEY_MAP[e.key.toLowerCase()];
+    if (!mapping) return;
+
+    e.preventDefault();
+    const letter = isLetter(mapping.n);
+    const useShift = letter ? (capsOn !== shiftOn) : shiftOn;
+    const ch = useShift ? mapping.s : mapping.n;
+    insertText(ch);
+
+    if (shiftOn){ shiftOn = false; refreshDisplay(); } // shift is one-shot
+  });
+
+  output.addEventListener('input', updateCount);
+
+  refreshDisplay();
+  updateCount();
+})();
+</script>
+</body>
+</html>
